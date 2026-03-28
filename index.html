@@ -20,19 +20,6 @@
   header p { color: rgba(255,255,255,0.65); font-size: 0.82rem; margin-top: 4px; font-weight: 300; position: relative; }
   .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f0a500; margin-right: 5px; vertical-align: middle; transition: background 0.3s; }
   .sync-dot.live { background: #52d68a; }
-  .notif-banner {
-    background: #fff8e6; border: 1px solid #e8c870; border-radius: 10px;
-    padding: 12px 16px; margin-bottom: 16px; font-size: 0.84rem; color: #5a4010;
-    display: none; align-items: center; gap: 10px; animation: slideIn 0.3s ease;
-  }
-  .notif-banner.show { display: flex; }
-  .notif-banner .notif-icon { font-size: 1.2rem; }
-  .notif-banner button {
-    margin-left: auto; background: var(--accent); color: white; border: none;
-    border-radius: 6px; padding: 5px 12px; font-family: 'DM Sans', sans-serif;
-    font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-  }
-  .notif-banner button:hover { background: #245a42; }
   .container { max-width: 540px; margin: 0 auto; padding: 24px 16px; }
   .add-form { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin-bottom: 24px; border: 1px solid var(--border); }
   .add-form h2 { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
@@ -44,6 +31,17 @@
   .input-cat { flex: 1; min-width: 120px; }
   .btn-add { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 10px 18px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
   .btn-add:hover { background: #245a42; }
+
+  /* SEND LIST BUTTON */
+  .send-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 18px; margin-bottom: 24px; display: none; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .send-bar.show { display: flex; }
+  .send-bar-text { flex: 1; font-size: 0.84rem; color: var(--muted); min-width: 160px; }
+  .send-bar-text strong { color: var(--text); display: block; font-size: 0.88rem; margin-bottom: 2px; }
+  .btn-send { background: #25D366; color: white; border: none; border-radius: 8px; padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .btn-send:hover { background: #1da851; }
+  .btn-send:disabled { background: #aaa; cursor: not-allowed; }
+  .timer-pill { font-family: monospace; font-size: 0.75rem; background: var(--accent-light); color: var(--accent); padding: 3px 9px; border-radius: 10px; white-space: nowrap; }
+
   .progress-wrap { margin-bottom: 20px; }
   .progress-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
   .progress-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
@@ -71,6 +69,10 @@
   .btn-clear { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; padding: 7px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
   .btn-clear:hover { border-color: #c0392b; color: #c0392b; }
   .loading { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 0.88rem; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; font-size: 0.82rem; padding: 10px 18px; border-radius: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 999; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -78,14 +80,8 @@
   <h1>🛒 Paul ❤️ Steph's Shopping List</h1>
   <p><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Connecting…</span></p>
 </header>
-<div class="container">
 
-  <!-- Notification permission banner -->
-  <div class="notif-banner" id="notif-banner">
-    <span class="notif-icon">🔔</span>
-    <span>Get notified when items are added to the list</span>
-    <button onclick="requestNotifPermission()">Allow</button>
-  </div>
+<div class="container">
 
   <div class="add-form">
     <h2>Add an item</h2>
@@ -109,6 +105,18 @@
     </div>
   </div>
 
+  <!-- Send notification bar -->
+  <div class="send-bar" id="send-bar">
+    <div class="send-bar-text">
+      <strong>Ready to notify?</strong>
+      Auto-sends in <span class="timer-pill" id="timer-pill">5:00</span>
+    </div>
+    <button class="btn-send" id="btn-send" onclick="sendWhatsApp(false)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.122 1.533 5.854L.057 23.885a.5.5 0 0 0 .606.61l6.208-1.63A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.9a9.9 9.9 0 0 1-5.031-1.371l-.361-.214-3.733.981.997-3.648-.235-.374A9.862 9.862 0 0 1 2.1 12C2.1 6.534 6.534 2.1 12 2.1c5.466 0 9.9 4.434 9.9 9.9 0 5.466-4.434 9.9-9.9 9.9z"/></svg>
+      Send List Now
+    </button>
+  </div>
+
   <div class="progress-wrap" id="progress-wrap" style="display:none;">
     <div class="progress-label">
       <span id="progress-text">0 of 0 collected</span>
@@ -125,9 +133,11 @@
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, push, update, remove, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, push, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
     databaseURL: "https://shopping-list-d9730-default-rtdb.europe-west1.firebasedatabase.app/"
@@ -137,85 +147,145 @@
   const db = getDatabase(app);
   const listRef = ref(db, 'items');
 
+  // WhatsApp config — both recipients
+  const WA_RECIPIENTS = [
+    { phone: '447817353908', apikey: '9602467' },  // Paul
+    { phone: '447545228790', apikey: '1307440' }   // Steph
+  ];
+
+  const TIMEOUT_MINUTES = 5;
   const CATEGORY_EMOJIS = {
     'Fruit & Veg':'🥦','Dairy & Eggs':'🥛','Meat & Fish':'🥩',
     'Bakery':'🍞','Tins & Dry Goods':'🥫','Frozen':'🧊',
     'Drinks':'🥤','Cleaning & Home':'🧹','Other':'📦'
   };
 
+  let currentItems = [];
+  let autoSendTimer = null;
+  let timerInterval = null;
+  let timerSecondsLeft = 0;
+  let lastAddedTime = null;
+  let notificationSentForSession = false;
+
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ---- NOTIFICATIONS ----
-
-  // Show the allow-notifications banner if not yet decided
-  function checkNotifStatus() {
-    if (!('Notification' in window)) return; // browser doesn't support it
-    if (Notification.permission === 'default') {
-      document.getElementById('notif-banner').classList.add('show');
-    }
+  function showToast(msg, duration = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(() => t.classList.remove('show'), duration);
   }
 
-  window.requestNotifPermission = async function() {
-    const permission = await Notification.requestPermission();
-    document.getElementById('notif-banner').classList.remove('show');
-    if (permission === 'granted') {
-      new Notification("Paul ❤️ Steph's Shopping List", {
-        body: "Notifications are on! You'll be alerted when items are added.",
-        icon: "https://em-content.zobj.net/source/twitter/376/shopping-cart_1f6d2.png"
-      });
+  // Build WhatsApp message from current items
+  function buildMessage(items) {
+    if (items.length === 0) return 'The shopping list is currently empty.';
+    const cats = {};
+    items.filter(i => !i.done).forEach(item => {
+      if (!cats[item.cat]) cats[item.cat] = [];
+      cats[item.cat].push(item);
+    });
+    let msg = '🛒 *Shopping List*\n\n';
+    Object.entries(cats).forEach(([cat, catItems]) => {
+      const emoji = CATEGORY_EMOJIS[cat] || '📦';
+      msg += `*${emoji} ${cat}*\n`;
+      catItems.forEach(i => { msg += `  • ${i.name} (${i.qty})\n`; });
+      msg += '\n';
+    });
+    msg += '_Open the list: https://paulwrighting.github.io/shopping-list/_';
+    return msg;
+  }
+
+  // Send WhatsApp to both recipients
+  window.sendWhatsApp = async function(isAuto = false) {
+    const btn = document.getElementById('btn-send');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    const message = buildMessage(currentItems);
+    const encoded = encodeURIComponent(message);
+
+    let allOk = true;
+    for (const r of WA_RECIPIENTS) {
+      try {
+        await fetch(`https://api.callmebot.com/whatsapp.php?phone=${r.phone}&text=${encoded}&apikey=${r.apikey}`);
+      } catch(e) {
+        allOk = false;
+      }
     }
+
+    clearAutoTimer();
+    notificationSentForSession = true;
+    document.getElementById('send-bar').classList.remove('show');
+
+    showToast(allOk
+      ? (isAuto ? '✅ List sent automatically via WhatsApp!' : '✅ List sent to both phones via WhatsApp!')
+      : '⚠️ There was a problem sending — try again', 4000);
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.122 1.533 5.854L.057 23.885a.5.5 0 0 0 .606.61l6.208-1.63A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.9a9.9 9.9 0 0 1-5.031-1.371l-.361-.214-3.733.981.997-3.648-.235-.374A9.862 9.862 0 0 1 2.1 12C2.1 6.534 6.534 2.1 12 2.1c5.466 0 9.9 4.434 9.9 9.9 0 5.466-4.434 9.9-9.9 9.9z"/></svg> Send List Now`;
   };
 
-  function sendNotification(itemName, category) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    const emoji = CATEGORY_EMOJIS[category] || '📦';
-    new Notification("🛒 Shopping list updated", {
-      body: emoji + " " + itemName + " has been added to the list",
-      icon: "https://em-content.zobj.net/source/twitter/376/shopping-cart_1f6d2.png",
-      badge: "https://em-content.zobj.net/source/twitter/376/shopping-cart_1f6d2.png"
-    });
+  // Auto-send timer — 5 minutes after last item added
+  function startAutoTimer() {
+    clearAutoTimer();
+    notificationSentForSession = false;
+    timerSecondsLeft = TIMEOUT_MINUTES * 60;
+    document.getElementById('send-bar').classList.add('show');
+    updateTimerDisplay();
+
+    timerInterval = setInterval(() => {
+      timerSecondsLeft--;
+      updateTimerDisplay();
+      if (timerSecondsLeft <= 0) {
+        clearAutoTimer();
+        window.sendWhatsApp(true);
+      }
+    }, 1000);
   }
 
-  // ---- FIREBASE LISTENERS ----
+  function clearAutoTimer() {
+    clearInterval(timerInterval);
+    clearTimeout(autoSendTimer);
+    timerInterval = null;
+  }
 
-  // Track known item IDs to avoid notifying on initial load
-  let knownIds = new Set();
+  function updateTimerDisplay() {
+    const m = Math.floor(timerSecondsLeft / 60);
+    const s = timerSecondsLeft % 60;
+    document.getElementById('timer-pill').textContent = m + ':' + String(s).padStart(2, '0');
+  }
+
+  // Firebase
   let initialLoadDone = false;
+  let previousItemIds = new Set();
 
-  // Full list listener for rendering
   onValue(listRef, (snapshot) => {
     document.getElementById('sync-dot').classList.add('live');
     document.getElementById('sync-label').textContent = 'Live — syncing in real time';
     const data = snapshot.val();
-    const items = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
+    currentItems = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
 
     if (!initialLoadDone) {
-      // Record all existing IDs on first load — don't notify for these
-      items.forEach(i => knownIds.add(i.id));
+      currentItems.forEach(i => previousItemIds.add(i.id));
       initialLoadDone = true;
+      render(currentItems);
+      return;
     }
 
-    render(items);
-  }, (error) => {
-    document.getElementById('sync-label').textContent = 'Connection error — check your internet';
-  });
-
-  // Separate listener just for new items — for notifications
-  onChildAdded(listRef, (snapshot) => {
-    if (!initialLoadDone) return; // skip initial load
-    const id = snapshot.key;
-    if (knownIds.has(id)) return; // already knew about this one
-    knownIds.add(id);
-    const item = snapshot.val();
-    // Only notify if the app is not in focus (user is doing something else)
-    if (document.hidden) {
-      sendNotification(item.name, item.cat);
+    // Check if any genuinely new items were added
+    const newItems = currentItems.filter(i => !previousItemIds.has(i.id));
+    if (newItems.length > 0) {
+      newItems.forEach(i => previousItemIds.add(i.id));
+      if (!notificationSentForSession) {
+        startAutoTimer(); // reset the 5-min countdown on each new addition
+      }
     }
-  });
 
-  // ---- ACTIONS ----
+    render(currentItems);
+  });
 
   window.addItem = function() {
     const name = document.getElementById('inp-name').value.trim();
@@ -248,9 +318,11 @@
   window.clearAll = function() {
     if (!confirm('Clear the entire shopping list?')) return;
     remove(listRef);
+    clearAutoTimer();
+    document.getElementById('send-bar').classList.remove('show');
+    notificationSentForSession = false;
+    previousItemIds.clear();
   };
-
-  // ---- RENDER ----
 
   function render(items) {
     const container = document.getElementById('list-container');
@@ -294,8 +366,6 @@
 
   document.getElementById('inp-name').addEventListener('keydown', e => { if (e.key === 'Enter') window.addItem(); });
   document.getElementById('inp-qty').addEventListener('keydown', e => { if (e.key === 'Enter') window.addItem(); });
-
-  checkNotifStatus();
 </script>
 </body>
 </html>
